@@ -36,9 +36,9 @@
                     document.getElementById('photos').innerHTML = result;
                 });
             };
-            this.loadMap = function(lat, long) {
-                var mapData = {'lat':lat, 'long':long};
-                mapData.destCanvas = document.getElementById('map');
+            this.loadMap = function(address, mapName) {
+                var mapData = {'address':address};
+                mapData.destCanvas = document.getElementById(mapName || 'map');
                 this.dispatchEvent('Adapter:GoogleMaps:loadMap', mapData);
             };
 		});
@@ -49,6 +49,7 @@
 <body>
     <div id="photos"></div>
 	<div id="tweets"></div>
-    <div id="map" style="width:400px; height: 400px;"></div>
+    <div id="map" style="width:100%; height: 400px;"></div>
+    <div id="map2" style="width:100%; height: 400px;"></div>
 </body>
 </html>

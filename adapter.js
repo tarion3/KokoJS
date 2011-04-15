@@ -53,9 +53,11 @@ koko.defineAdapter('Picasa', function() {
 });
 
 koko.defineAdapter('GoogleMaps', function() {
+    
     koko.require('./models/GoogleMaps.js');
     
     this.loadMap = function(eventData, callback, callerRef) {
         this.dispatchEvent('Model:GoogleMaps:getMap', eventData);
     };
+    
 });

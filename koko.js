@@ -4,37 +4,48 @@
 
 	var scriptQueue = [],		// Queue for all scripts waiting to be loaded
 		scriptQueueIdx = 0,		// Index pointing to the next place in the script queue to place a script - used for dependency checking
-		scriptProcTimer,		// Script processing timer handle
+		scriptProcTimer,		// Script queue processing timer
 		scriptsLoading = 0,		// Integer indicating the number of scripts currently being loaded
 		currentScript;			// The current script being loaded
 
-	var eventQueue = [],
-		eventQueueIdx = 0,
-		eventProcTimer,
+	var eventQueue = [],        // Queue for all events waiting to be dispatched
+        eventQueueIdx = 0,      // Index pointing to the next place in the event queue to place an event - used for dependency checking
+		eventProcTimer,         // Event queue processing timer
+        eventsLoading = 0,      // Integer indicating the number of events currently being dispatched
 		eventListeners = [];	// Collection of event listener objects to be traveresed upon event dispatch
 
-	// Extends event management capability to all MVA classes
+    // Utility function to see if the passed in object is an instance of any of the classes in the class array
+    var isInstanceOf = function(obj, classArray) {
+        for (var i = 0, c; (c = classArray[i++]) !== undefined;) {
+            if (obj instanceof c) return true;
+        }
+        return false;
+    };
+
+    // Extends event management capability to all MVA classes
 	var EventManager = function(dispatchDeny) {
 
 		// Allows each MVA object to dispatch MVA events
-		// If the framework is not ready (due to dependency loading), events are queued for later dispatch
+		// If the framework is not ready (due to script loading), events are queued for later dispatch
 		// Event names must be of the format Class:Name:Method
 		this.dispatchEvent = function(eventName, eventData, callback, callerRef) {
 			if (eventName === undefined) return;
-			if (!scriptsLoading) {
-				var thisRef = this, eventNameParts, dispatchAllowed = false, eventFunc;
-				if((eventNameParts = eventName.split(':')).length < 3) { throw 'Error: Event names must be of the format Class:Name:Method'; }
+			if (!scriptsLoading && !eventsLoading) {
+				var thisRef = this, eventNameParts, eventFunc;
+                if((eventNameParts = eventName.split(':')).length < 3) { throw 'Error: Event names must be of the format Class:Name:Method'; }
 				var eventDestType = eventNameParts[0],	// destination type/class
 					eventDestName = eventNameParts[1],	// event destination name
 					eventDestFunc = eventNameParts[2];	// event destination function
-				for (var i = 0, listener; (listener = eventListeners[i++]) !== undefined;) {
-					dispatchAllowed = !dispatchDeny.some(function(x){ return listener instanceof x; });
-					if(dispatchAllowed && (listener.type === eventDestType) && (listener.name === eventDestName) && (eventFunc = listener[eventDestFunc]) !== undefined) {
-						eventFunc.call(listener, eventData, callback || function(){}, callerRef || thisRef);
-					}
+                callback = callback || function(){};
+                for (var i = 0, listener; (listener = eventListeners[i++]) !== undefined;) {
+					if(!isInstanceOf(listener, dispatchDeny) && (listener.type === eventDestType) && (listener.name === eventDestName) && (eventFunc = listener[eventDestFunc]) !== undefined) {
+                        eventsLoading--;
+						eventFunc.call(listener, eventData, callback, callerRef || thisRef);
+                        eventsLoading++;
+                    }
 				}
 			} else {
-				eventQueue.push({'thisRef':this,'eventName':eventName,'eventData':eventData,'callback':callback,'callerRef':callerRef});
+				eventQueue.splice(eventQueueIdx++, 0, {'thisRef':this,'eventName':eventName,'eventData':eventData,'callback':callback,'callerRef':callerRef});
 				procEventQueue();
 			}
 		};
@@ -47,11 +58,11 @@
 	// Uses reference to a single event timer to ensure there is no overlap in queue processing
 	var procEventQueue = function() {
 		if (eventQueue[0] !== undefined) {
-			if (!scriptsLoading) { 
+			if (!scriptsLoading && !eventsLoading) { 
 				var eventObj = eventQueue.shift();
 				eventObj.thisRef.dispatchEvent(eventObj.eventName, eventObj.eventData, eventObj.callback, eventObj.callerRef);
 			}
-			eventProcTimer = setTimeout(procEventQueue, 10);
+			eventProcTimer = setTimeout(procEventQueue, 50);
 		}
 	};
 	
@@ -74,7 +85,7 @@
 	// Used as a mechanism for loading dependencies and marks the framework as not ready until all scripts have loaded
 	var loadScript = function(scriptURL, syncAsync, callback, callerRef, onError) {
 		if(scriptURL === undefined) return;
-		if (!scriptsLoading || syncAsync === 'async') {
+		if (!scriptsLoading || (syncAsync === 'async')) {
 			var headEl = document.getElementsByTagName('head')[0];
 			var script = document.createElement('script');
 			script.type = 'text/javascript';
@@ -97,11 +108,11 @@
 	// Uses reference to a single event timer to ensure there is no overlap in queue processing
 	var procScriptQueue = function() {
 		if (scriptQueue[0] !== undefined) {
-			if (!scriptsLoading || scriptQueue[0].syncAsync === 'async') { 
+			if (!scriptsLoading || (scriptQueue[0].syncAsync === 'async')) { 
 				var scriptObj = scriptQueue.shift();
 				loadScript(scriptObj.src, scriptObj.syncAsync, scriptObj.callback, scriptObj.callerRef, scriptObj.onError); 
 			}
-			scriptProcTimer = setTimeout(procScriptQueue, 10);
+			scriptProcTimer = setTimeout(procScriptQueue, 50);
 		}
 	};
 
@@ -112,7 +123,7 @@
 		if (typeof scriptURLs === 'string') { scriptURLs = scriptURLs.replace(' ', '').split(','); }
 		scriptQueueIdx = 0;
 		for (var scriptURL, scriptObj; (scriptURL = scriptURLs.shift()) !== undefined;) {
-			scriptObj = {'src':scriptURL, 'syncAsync':syncAsync};
+			scriptObj = {'src':scriptURL, 'syncAsync':syncAsync || 'sync'};
 			if (scriptURLs.length === 0) {
 				scriptObj.callback = callback;
 				scriptObj.callerRef = callerRef;
