@@ -4,7 +4,7 @@ koko.defineModel('GoogleMaps', function() {
 
     this.getMap = function(eventData, callback, callerRef) {
         if (eventData.address === undefined) { throw 'Error: Call to getMap requires an address'; }
-        this.codeAddress(eventData, function(coords) {
+        this.dispatchEvent('Model:GoogleMaps:codeAddress', eventData, function(coords) {
             var latlng = new google.maps.LatLng(coords.Da, coords.Ea);
             var myOptions = {
                 zoom: 8,
@@ -16,8 +16,7 @@ koko.defineModel('GoogleMaps', function() {
                 map: map, 
                 position: coords
             });
-            callback.call(callerRef, map);
-        }, this);
+        });
     };
     
     this.codeAddress = function(eventData, callback, callerRef) {

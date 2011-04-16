@@ -1,17 +1,18 @@
 (function(){
+    
+    var extFWName = 'koko',         // Global framework object name
+        extFWRef,                   // Global framework object reference
+        emptyFunc = function(){};   // Reference to empty function for defaults usage
 
-    var fwExtName = 'koko';		// Name of the external framework object
+    var scriptQueue = [],       // Array of queued scripts waiting to be processed
+        scriptQueueIdx = 0,     // Index into script queue to keep dependencies in order
+        scriptLoadCount = 0,    // Counter for the number of scripts currently loading
+        scriptProcTimer;        // Timer handle for script queue processing
 
-	var scriptQueue = [],		// Queue for all scripts waiting to be loaded
-		scriptQueueIdx = 0,		// Index pointing to the next place in the script queue to place a script - used for dependency checking
-		scriptProcTimer,		// Script queue processing timer
-		scriptsLoading = 0,		// Integer indicating the number of scripts currently being loaded
-		currentScript;			// The current script being loaded
-
-	var eventQueue = [],        // Queue for all events waiting to be dispatched
+    var eventQueue = [],        // Queue for all events waiting to be dispatched
         eventQueueIdx = 0,      // Index pointing to the next place in the event queue to place an event - used for dependency checking
-		eventProcTimer,         // Event queue processing timer
-        eventsLoading = 0,      // Integer indicating the number of events currently being dispatched
+        eventLoadCount = 0,     // Integer indicating the number of events currently being dispatched
+        eventProcTimer,         // Event queue processing timer
 		eventListeners = [];	// Collection of event listener objects to be traveresed upon event dispatch
 
     // Utility function to see if the passed in object is an instance of any of the classes in the class array
@@ -22,6 +23,111 @@
         return false;
     };
 
+    var queueScripts = function(scriptURLs, callback, callerRef, hasIntCallback) {
+        if (typeof scriptURLs === 'undefined') { throw 'Error: Call to queueScripts requires scriptURLs to queue'; }
+        if (typeof scriptURLs === 'string') { scriptURLs = (scriptURLs.replace(' ', '')).split(','); }
+        scriptQueueIdx = 0;
+        for (var scriptURL; (scriptURL = scriptURLs.shift()) !== undefined;) {
+            var scriptObj = {'src':scriptURL, 'hasIntCallback':hasIntCallback || false};
+            if (scriptURLs.length === 0) {
+                scriptObj.callback = callback || emptyFunc;
+                scriptObj.callerRef = callerRef || this;
+            }
+            scriptQueue.splice(scriptQueueIdx++, 0, scriptObj);
+        }
+        scriptProcTimer = setTimeout(procScriptQueue, 50);
+    };
+    
+    var procScriptQueue = function() {
+        if (scriptQueue.length > 0) {
+            if (scriptLoadCount === 0) {
+                for (var scriptObj; (scriptObj = scriptQueue.shift()) !== undefined;) {
+                    loadScript(scriptObj);
+                }
+            }
+            scriptProcTimer = setTimeout(procScriptQueue, 50);
+        }
+    };
+    
+    var loadScript = function(scriptObj) {
+        var docHead = document.getElementsByTagName('head')[0];
+        var script = document.createElement('script');
+        script.src = scriptObj.src;
+        script.type = 'text/javascript';
+        script.onload = function() {
+            if(!scriptObj.hasIntCallback) { scriptLoadCount--; }
+            if (scriptObj.callback !== undefined) {
+                scriptObj.callback.call(scriptObj.callerRef);
+            }
+        };
+        scriptLoadCount++;
+        docHead.appendChild(script);
+    };
+    
+    var loadJSON = function(dataURL, callback, callerRef) {
+        if (typeof dataURL === 'undefined') { throw 'Error: Call to queueJSON requires jsonURL to queue'; }
+        var localCallback;
+        while(extFWRef[localCallback = 'callback' + Math.floor(Math.random(Date.now())*101)] !== undefined){}
+		extFWRef[localCallback] = function(JSONObj) {
+            scriptLoadCount--;
+			if (callback !== undefined) { callback.call(callerRef || this, JSONObj); }
+			delete extFWRef[localCallback];
+		};
+        queueScripts(dataURL + extFWName + '.' + localCallback, undefined, undefined, true);
+    };
+
+    // Queues events to be synchronously loaded
+	// Queue processing method is called immediately and monitors the queue for new events
+	var queueEvents = function(eventNames, eventData, callback, callerRef, dispatchDeny) {
+		if (eventNames === undefined) return;
+		if (typeof eventNames === 'string') { eventNames = (eventNames.replace(' ', '')).split(','); }
+		eventQueueIdx = 0;
+		for (var eventName; (eventName = eventNames.shift()) !== undefined;) {
+            var eventObj = {'eventName':eventName,'eventData':eventData,'dispatchDeny':dispatchDeny};
+			if (eventNames.length === 0) {
+				eventObj.callback = callback || emptyFunc;
+				eventObj.callerRef = callerRef || this;
+			}
+			eventQueue.splice(eventQueueIdx++, 0, eventObj);
+		}
+		eventProcTimer = setTimeout(procEventQueue, 20);
+	};
+
+    // Dispatches all queued events in the order they were queued
+    // Uses reference to a single event timer to ensure there is no overlap in queue processing
+	var procEventQueue = function() {
+		if (eventQueue.length > 0) {
+			if (scriptQueue.length === 0 && scriptLoadCount === 0 && eventLoadCount === 0) {
+                for (var eventObj; (eventObj = eventQueue.shift()) !== undefined;) {
+				    _dispatchEvent(eventObj);
+                }
+			}
+			eventProcTimer = setTimeout(procEventQueue, 20);
+		}
+	};
+
+    var _dispatchEvent = function(eventObj) {
+        var eventNameParts, eventFunc;
+        if((eventNameParts = eventObj.eventName.split(':')).length < 3) { throw 'Error: Event names must be of the format Class:Name:Method'; }
+        var eventDestType = eventNameParts[0],    // destination type/class
+            eventDestName = eventNameParts[1],    // event destination name
+            eventDestFunc = eventNameParts[2];	// event destination function
+        if (eventObj.callback !== emptyFunc) {
+            eventObj.callback = (function(cb,sc){ 
+                return function() {
+                    eventLoadCount--;
+                    if(cb !== undefined) { cb.apply(sc, arguments); } 
+                };
+            })(eventObj.callback, eventObj.callerRef);
+        }
+        for (var i = 0, listener; (listener = eventListeners[i++]) !== undefined;) {
+            if(!isInstanceOf(listener, eventObj.dispatchDeny) && (listener.type === eventDestType) && (listener.name === eventDestName) && (eventFunc = listener[eventDestFunc]) !== undefined) {
+                if (eventObj.callback !== emptyFunc) { eventLoadCount++; }
+                eventFunc.call(listener, eventObj.eventData, eventObj.callback, eventObj.callerRef);
+            }
+        }
+	};
+
     // Extends event management capability to all MVA classes
 	var EventManager = function(dispatchDeny) {
 
@@ -29,45 +135,15 @@
 		// If the framework is not ready (due to script loading), events are queued for later dispatch
 		// Event names must be of the format Class:Name:Method
 		this.dispatchEvent = function(eventName, eventData, callback, callerRef) {
-			if (eventName === undefined) return;
-			if (!scriptsLoading && !eventsLoading) {
-				var thisRef = this, eventNameParts, eventFunc;
-                if((eventNameParts = eventName.split(':')).length < 3) { throw 'Error: Event names must be of the format Class:Name:Method'; }
-				var eventDestType = eventNameParts[0],	// destination type/class
-					eventDestName = eventNameParts[1],	// event destination name
-					eventDestFunc = eventNameParts[2];	// event destination function
-                callback = callback || function(){};
-                for (var i = 0, listener; (listener = eventListeners[i++]) !== undefined;) {
-					if(!isInstanceOf(listener, dispatchDeny) && (listener.type === eventDestType) && (listener.name === eventDestName) && (eventFunc = listener[eventDestFunc]) !== undefined) {
-                        eventsLoading--;
-						eventFunc.call(listener, eventData, callback, callerRef || thisRef);
-                        eventsLoading++;
-                    }
-				}
-			} else {
-				eventQueue.splice(eventQueueIdx++, 0, {'thisRef':this,'eventName':eventName,'eventData':eventData,'callback':callback,'callerRef':callerRef});
-				procEventQueue();
-			}
+            queueEvents(eventName, eventData, callback, callerRef || this, dispatchDeny);
 		};
 
 		// Registers this MVA object as an event listener so it is able to accept incoming events
 		eventListeners.push(this);
 	};
 
-	// Dispatches all queued events in the order they were queued
-	// Uses reference to a single event timer to ensure there is no overlap in queue processing
-	var procEventQueue = function() {
-		if (eventQueue[0] !== undefined) {
-			if (!scriptsLoading && !eventsLoading) { 
-				var eventObj = eventQueue.shift();
-				eventObj.thisRef.dispatchEvent(eventObj.eventName, eventObj.eventData, eventObj.callback, eventObj.callerRef);
-			}
-			eventProcTimer = setTimeout(procEventQueue, 50);
-		}
-	};
-	
-	// Defines standard attributes of all MVA classes
-	// Event management capability is appended by cloning the EventManager function as opposed to class inheritance
+    // Defines standard attributes of all MVA classes
+    // Event management capability is appended by cloning the EventManager function as opposed to class inheritance
 	var MVAClass = function(classType, className, classDef, dispatchDeny) {
 		if(classType !== undefined) { this.type = classType; } else { throw 'Error: Class type required to create a new class.'; }
 		if(className !== undefined) { this.name = className; } else { throw 'Error: Class name required to create a new class.'; }
@@ -80,76 +156,9 @@
 	var View = function(className, classDef) { MVAClass.call(this, 'View', className, classDef, [Model]); };
 	var Model = function(className, classDef) { MVAClass.call(this, 'Model', className, classDef, [View]); };
 	var Adapter = function(className, classDef){ MVAClass.call(this, 'Adapter', className, classDef); };
-
-	// Allows for external scripts (both local and remote) to be dynamically appended to the document
-	// Used as a mechanism for loading dependencies and marks the framework as not ready until all scripts have loaded
-	var loadScript = function(scriptURL, syncAsync, callback, callerRef, onError) {
-		if(scriptURL === undefined) return;
-		if (!scriptsLoading || (syncAsync === 'async')) {
-			var headEl = document.getElementsByTagName('head')[0];
-			var script = document.createElement('script');
-			script.type = 'text/javascript';
-			script.src = scriptURL;
-			script.onload = function() {
-				scriptsLoading++;
-				headEl.removeChild(script);
-				if (callback !== undefined) callback.call(callerRef || this);
-			};
-			script.onreadystatechange = function() {
-				if (script.readyState == 'complete') { script.onload(); }
-			};
-			script.onerror = onError || script.onload;
-			scriptsLoading--;
-			currentScript = headEl.appendChild(script);
-		}
-	};
-
-	// Loads all queued scripts in the order they were queued
-	// Uses reference to a single event timer to ensure there is no overlap in queue processing
-	var procScriptQueue = function() {
-		if (scriptQueue[0] !== undefined) {
-			if (!scriptsLoading || (scriptQueue[0].syncAsync === 'async')) { 
-				var scriptObj = scriptQueue.shift();
-				loadScript(scriptObj.src, scriptObj.syncAsync, scriptObj.callback, scriptObj.callerRef, scriptObj.onError); 
-			}
-			scriptProcTimer = setTimeout(procScriptQueue, 50);
-		}
-	};
-
-	// Queues external scripts (both local and remote) to be synchronously loaded
-	// Queue processing method is called immediately and monitors the queue for new events
-	var queueScripts = function(scriptURLs, syncAsync, callback, callerRef, onError) {
-		if (scriptURLs === undefined) return;
-		if (typeof scriptURLs === 'string') { scriptURLs = scriptURLs.replace(' ', '').split(','); }
-		scriptQueueIdx = 0;
-		for (var scriptURL, scriptObj; (scriptURL = scriptURLs.shift()) !== undefined;) {
-			scriptObj = {'src':scriptURL, 'syncAsync':syncAsync || 'sync'};
-			if (scriptURLs.length === 0) {
-				scriptObj.callback = callback;
-				scriptObj.callerRef = callerRef;
-				scriptObj.onError = onError;
-			}
-			scriptQueue.splice(scriptQueueIdx++, 0, scriptObj);
-		}
-		procScriptQueue();
-	};
-	
-	// Loads JSON-encoded data by using the loadScript method
-	// Wraps the given callback in a locally-executable reference for execution upon data load
-	// Callback function wrapper name must be specified in the dataURL
-	var loadJSON = function(dataURL, syncAsync, callback, callerRef, onError) {
-		if (dataURL === undefined) { throw 'Error: Data URL must be specified when calling loadJSON'; }
-		var thisRef = this, localCallback;
-		while(thisRef[localCallback = 'callback' + Math.floor(Math.random(Date.now())*101)] !== undefined){}
-		thisRef[localCallback] = function(JSONObj) { 
-			if (callback !== undefined) { callback.call(callerRef, JSONObj); }
-			delete thisRef[localCallback];
-		};
-		queueScripts(dataURL + fwExtName + '.' + localCallback, syncAsync, undefined, undefined, onError);
-	};
-
-	// Defines the external framework object methods
-	return (this[fwExtName] = {
+    
+     // Defines the external framework object methods
+	return (extFWRef = this[extFWName] = {
 		'defineView': function(className, classDef) { return new View(className, classDef); },
 		'defineModel': function(className, classDef) { return new Model(className, classDef); },
 		'defineAdapter': function(className, classDef) { return new Adapter(className, classDef); },
@@ -157,5 +166,5 @@
 		'require': queueScripts,
 		'loadJSON': loadJSON
 	});
-	
-}());
+    
+})();
