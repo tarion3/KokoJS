@@ -117,19 +117,11 @@
         var eventDestType = eventNameParts[0],  // destination type/class
             eventDestName = eventNameParts[1],  // event destination name
             eventDestFunc = eventNameParts[2];  // event destination function
-        if (typeof eventObj.callback !== 'undefined') {
-            eventObj.callback = (function(cb,sc){ 
-                return function() {
-                    eventLoadCount--;
-                    cb.apply(sc, arguments); 
-                };
-            })(eventObj.callback, eventObj.callerRef);
-        }
         for (var i = 0, listener; typeof (listener = eventListeners[i++]) !== 'undefined';) {
             if(!isInstanceOf(listener, eventObj.dispatchDeny) && (listener.type === eventDestType) && (listener.name === eventDestName) && typeof (eventFunc = listener[eventDestFunc]) !== 'undefined') {
-                if (typeof eventObj.callback !== 'undefined') { eventLoadCount++; }
+                eventLoadCount++;
                 eventFunc.call(listener, eventObj.eventData, eventObj.callback, eventObj.callerRef);
-            }
+                eventLoadCount--;}
         }
     };
 
