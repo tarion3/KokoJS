@@ -4,7 +4,7 @@ koko.defineAdapter('Twitter', function() {
 
     var feedParser = function(feedData) {
         var feedHTML = '<table>';
-        if (feedData.error !== undefined) {
+        if (typeof feedData.error !== 'undefined') {
             feedHTML += '<tr><td>Error: ' + feedData.error + '</td></tr>';
         } else {
             for (var i = 0; i < feedData.length; i++) {
@@ -35,7 +35,7 @@ koko.defineAdapter('Picasa', function() {
     
     var feedParser = function(feedData) {
         var feedHTML = '<table><tr>', imgCount = 0;
-        for (var i=0, item; (item = feedData.feed.entry[i++]) !== undefined;) {
+        for (var i=0, item; typeof (item = feedData.feed.entry[i++]) !== 'undefined';) {
             feedHTML += '<td><img src="' + item.content.src + '" width="200"/></td>';
             imgCount++;
             if(imgCount % 5 === 0) { feedHTML += '</tr><tr>'; }
@@ -52,12 +52,16 @@ koko.defineAdapter('Picasa', function() {
     
 });
 
-koko.defineAdapter('GoogleMaps', function() {
+koko.defineAdapter('Google', function() {
     
-    koko.require('./models/GoogleMaps.js');
+    koko.require('./models/Google.js');
     
     this.loadMap = function(eventData, callback, callerRef) {
         this.dispatchEvent('Model:GoogleMaps:getMap', eventData);
+    };
+    
+    this.getCalendar = function(eventData, callback, callerRef) {
+        this.dispatchEvent('Model:GoogleCalendar:getCalendar', eventData, callback, callerRef);
     };
     
 });
