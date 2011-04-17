@@ -58,10 +58,8 @@
     // Uses reference to a single event timer to ensure there is no overlap in queue processing
     var procScriptQueue = function() {
         if (scriptQueue.length > 0) {
-            if (scriptLoadCount === 0) {
-                loadScript(scriptQueue.shift());
-            }
-            scriptProcTimer = setTimeout(procScriptQueue, 50);
+            if (scriptLoadCount === 0) { loadScript(scriptQueue.shift()); }
+            scriptProcTimer = setTimeout(procScriptQueue, 10);
         }
     };
     
@@ -105,10 +103,8 @@
     // Uses reference to a single event timer to ensure there is no overlap in queue processing
 	var procEventQueue = function() {
 		if (eventQueue.length > 0) {
-			if (scriptQueue.length === 0 && scriptLoadCount === 0 && eventLoadCount === 0) {
-				dispatchEvent(eventQueue.shift());
-			}
-			eventProcTimer = setTimeout(procEventQueue, 20);
+			if (scriptQueue.length === 0 && scriptLoadCount === 0 && eventLoadCount === 0) { dispatchEvent(eventQueue.shift()); }
+			eventProcTimer = setTimeout(procEventQueue, 10);
 		}
 	};
 
@@ -141,8 +137,6 @@
 	var EventManager = function(dispatchDeny) {
 
 		// Allows each MVA object to dispatch MVA events
-		// If the framework is not ready (due to script loading), events are queued for later dispatch
-		// Event names must be of the format Class:Name:Method
 		this.dispatchEvent = function(eventName, eventData, callback, callerRef) {
             queueEvents(eventName, eventData, callback, callerRef || this, dispatchDeny);
 		};
