@@ -121,7 +121,8 @@
             if(!isInstanceOf(listener, eventObj.dispatchDeny) && (listener.type === eventDestType) && (listener.name === eventDestName) && typeof (eventFunc = listener[eventDestFunc]) !== 'undefined') {
                 eventLoadCount++;
                 eventFunc.call(listener, eventObj.eventData, eventObj.callback, eventObj.callerRef);
-                eventLoadCount--;}
+                eventLoadCount--;
+            }
         }
     };
 
