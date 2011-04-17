@@ -1,6 +1,6 @@
 koko.defineModel('GoogleMaps', function() {
     
-    koko.loadJSON('http://maps.google.com/maps/api/js?sensor=false&callback=');
+    koko.requireAsync('http://maps.google.com/maps/api/js?sensor=false&callback=');
 
     this.getMap = function(eventData, callback, callerRef) {
         if (eventData.address === undefined) { throw 'Error: Call to getMap requires an address'; }
