@@ -167,7 +167,7 @@
         'loadScriptAsync': queueAsyncScript,
         'require': queueScripts,
         'requireAsync': queueAsyncScript,
-        'loadJSON': queueAsyncScript
+        'loadJSONAsync': queueAsyncScript
     });
 
 })();
