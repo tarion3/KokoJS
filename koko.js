@@ -58,7 +58,6 @@
     var procScriptQueue = function() {
         if (scriptQueue.length > 0) {
             if (scriptLoading === 0) {
-                console.log('Script Load:', scriptQueue[0].src);
                 scriptQueueIdx = 0;
                 loadScript(scriptQueue.shift());
             }
@@ -106,7 +105,6 @@
     var procEventQueue = function() {
         if (eventQueue.length > 0) {
             if (scriptQueue.length === 0 && scriptLoading === 0 && eventLoadCount === 0) {
-                console.log('Event Dispatch:', eventQueue[0].eventName);
                 eventQueueIdx = 0;
                 dispatchEvent(eventQueue.shift());
             }
