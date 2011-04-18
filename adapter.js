@@ -15,15 +15,15 @@ koko.defineAdapter('Twitter', function() {
         return feedHTML;
     };
     
-    this.getPublicTweets = function(eventData, callback, callerRef) {
+    this.getPublicTweets = function(eventData, callback, context) {
         this.dispatchEvent('Model:Twitter:getPublicTweets', eventData, function(feedData) {
-            callback.call(callerRef, feedParser(feedData));
+            callback.call(context, feedParser(feedData));
         });
     };
     
-    this.getTweetsByName = function(eventData, callback, callerRef) {
+    this.getTweetsByName = function(eventData, callback, context) {
         this.dispatchEvent('Model:Twitter:getTweetsByName', eventData, function(feedData) {
-            callback.call(callerRef, feedParser(feedData));
+            callback.call(context, feedParser(feedData));
         });
     };
 
@@ -44,9 +44,9 @@ koko.defineAdapter('Picasa', function() {
         return feedHTML;
     };
     
-    this.getRecentPhotos = function(eventData, callback, callerRef) {
+    this.getRecentPhotos = function(eventData, callback, context) {
         this.dispatchEvent('Model:Picasa:getRecentPhotos', eventData, function(feedData) {
-            callback.call(callerRef, feedParser(feedData));
+            callback.call(context, feedParser(feedData));
         });
     };
     
@@ -56,12 +56,12 @@ koko.defineAdapter('Google', function() {
     
     koko.require('./models/Google.js');
     
-    this.loadMap = function(eventData, callback, callerRef) {
+    this.loadMap = function(eventData, callback, context) {
         this.dispatchEvent('Model:GoogleMaps:getMap', eventData);
     };
     
-    this.getCalendar = function(eventData, callback, callerRef) {
-        this.dispatchEvent('Model:GoogleCalendar:getCalendar', eventData, callback, callerRef);
+    this.getCalendar = function(eventData, callback, context) {
+        this.dispatchEvent('Model:GoogleCalendar:getCalendar', eventData, callback, context);
     };
     
 });

@@ -1,6 +1,6 @@
 koko.defineModel('GoogleMaps', function() {
 
-    this.getMap = function(eventData, callback, callerRef) {
+    this.getMap = function(eventData, callback, context) {
         if (typeof eventData.address === 'undefined') { throw 'Error: Call to getMap requires an address'; }
         if (typeof google === 'undefined') { koko.requireAsync('http://maps.google.com/maps/api/js?sensor=false&callback='); }
 
@@ -19,12 +19,12 @@ koko.defineModel('GoogleMaps', function() {
         });
     };
     
-    this.codeAddress = function(eventData, callback, callerRef) {
+    this.codeAddress = function(eventData, callback, context) {
         if (typeof eventData.address === 'undefined') { throw 'Error: Call to codeAddress requires address to decode'; }
         var geocoder = new google.maps.Geocoder();
         geocoder.geocode({ 'address': eventData.address}, function(results, status) {
             if (status == google.maps.GeocoderStatus.OK) {
-                callback.call(callerRef, results[0].geometry.location);
+                callback.call(context, results[0].geometry.location);
             } else {
                 throw 'Geocode was not successful for the following reason: ' + status;
             }
@@ -35,9 +35,9 @@ koko.defineModel('GoogleMaps', function() {
 
 koko.defineModel('GoogleCalendar', function() {
     
-    this.getCalendar = function(eventData, callback, callerRef) {
+    this.getCalendar = function(eventData, callback, context) {
         if (typeof eventData.name === 'undefined') { throw 'Error: Call to getCalendar requires a calendar name'; }
-        callback.call(callerRef, 'https://www.google.com/calendar/embed?src=' + eventData.name + '&ctz=America/Chicago');
+        callback.call(context, 'https://www.google.com/calendar/embed?src=' + eventData.name + '&ctz=America/Chicago');
     };
     
 });
