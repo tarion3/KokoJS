@@ -89,7 +89,7 @@
         docHead.appendChild(script);
     };
     
-    // Loads external JSON data (local or remote) that has been wrapped by a callback
+    // Loads external JSON-encoded data (local or remote) that has been wrapped by a callback
     // Callback is automatically executed on script load completion
     var loadJSONP = function(scriptURLs, callback, context) {
         queueScripts(scriptURLs, callback, context, true);

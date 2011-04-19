@@ -2,13 +2,12 @@ koko.defineModel('GoogleMaps', function() {
 
     this.getMap = function(eventData, callback, context) {
         if (typeof eventData.address === 'undefined') { throw 'Error: Call to getMap requires an address'; }
-        if (typeof google === 'undefined') { koko.require('http://maps.google.com/maps/api/js?sensor=false&callback=', undefined, undefined, true); }
+        if (typeof google === 'undefined') { koko.loadJSONP('http://maps.google.com/maps/api/js?sensor=false&callback='); }
 
         this.dispatchEvent('Model:GoogleMaps:codeAddress', eventData, function(coords) {
-            var latlng = new google.maps.LatLng(coords.Da, coords.Ea);
             var myOptions = {
                 zoom: 8,
-                center: latlng,
+                center: coords,
                 mapTypeId: google.maps.MapTypeId.ROADMAP
             };
             var map = new google.maps.Map(eventData.destCanvas, myOptions);
