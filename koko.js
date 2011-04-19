@@ -88,6 +88,12 @@
         scriptObj.scriptEl = script;
         docHead.appendChild(script);
     };
+    
+    // Loads external JSON data (local or remote) that has been wrapped by a callback
+    // Callback is automatically executed on script load completion
+    var loadJSONP = function(scriptURLs, callback, context) {
+        queueScripts(scriptURLs, callback, context, true);
+    };
 
     // Queues events to be dispatched later, ensuring that dependencies are handled appropriately
     // Queue processing method is called immediately and monitors the queue for new events
@@ -171,7 +177,7 @@
         'defineAdapter': function(className, classDef) { return new Adapter(className, classDef); },
         'loadScript': queueScripts,
         'require': queueScripts,
-        'loadJSONP': queueScripts
+        'loadJSONP': loadJSONP
     });
 
 })();
