@@ -6,7 +6,7 @@
 
     var scriptQueue = [],       // Array of queued scripts waiting to be processed
         scriptQueueIdx = 0,     // Index into script queue to keep dependencies in order
-        scriptLoading = 0,      // Integer indicating if a script is currently loading
+        scriptLoading = 0,      // Integer indicating if a script is currently being loaded
         scriptProcTimer;        // Timer handle for script queue processing
 
     var eventQueue = [],        // Queue for all events waiting to be dispatched
@@ -23,33 +23,38 @@
         return false;
     };
 
-    // Queues a script that executes an internal callback with JSON-encoded data as its parameter
-    var queueAsyncScript = function(scriptURL, callback, context) {
-        if (typeof scriptURL === 'undefined') { throw 'Error: Call to queueAsyncScript requires at least one scriptURL'; }
-        var localCallback;
-        while(typeof extFWRef[localCallback = 'callback' + Math.floor(Math.random(Date.now())*101)] !== 'undefined'){}
-        extFWRef[localCallback] = function() {
-            if (typeof callback !== 'undefined') { callback.apply(context || this, arguments); }
-            scriptLoading--;
-            delete extFWRef[localCallback];
-        };
-        queueScripts(scriptURL + extFWName + '.' + localCallback, undefined, undefined, true);
-    };
-
     // Queues scripts to be processed later, ensuring that dependencies are handled appropriately
     // Queue processing method is called immediately and monitors the queue for new scripts
-    var queueScripts = function(scriptURLs, callback, context, hasIntCallback) {
+    var queueScripts = function(scriptURLs, callback, context, isCallbackInt) {
         if (typeof scriptURLs === 'undefined') { throw 'Error: Call to queueScripts requires scriptURLs to queue'; }
         if (typeof scriptURLs === 'string') { scriptURLs = (scriptURLs.replace(' ', '')).split(','); }
+
+        // Add internal callback functionality to scripts if requested
+        var localCallback;
+        if (typeof isCallbackInt !== 'undefined' && isCallbackInt === true) {
+            while(typeof extFWRef[localCallback = 'callback' + Math.floor(Math.random(Date.now())*101)] !== 'undefined'){}
+            extFWRef[localCallback] = function() {
+                if (typeof callback !== 'undefined') { callback.apply(context || this, arguments); }
+                scriptLoading--;
+                delete extFWRef[localCallback];
+            };
+        }
+
         for (var scriptURL; typeof (scriptURL = scriptURLs.shift()) !== 'undefined';) {
-            var scriptObj = {'src':scriptURL, 'hasIntCallback':hasIntCallback || false};
+            var scriptObj = {'src':scriptURL, 'isCallbackInt':isCallbackInt || false};
             if (scriptURLs.length === 0) {
-                scriptObj.callback = callback;
-                scriptObj.context = context || this;
+                if (typeof localCallback !== 'undefined') {
+                    scriptObj.src += extFWName + '.' + localCallback;
+                } else {
+                    scriptObj.callback = callback;
+                    scriptObj.context = context || this;
+                }
             }
             scriptQueue.splice(scriptQueueIdx++, 0, scriptObj);
         }
+        
         scriptProcTimer = setTimeout(procScriptQueue, 11);
+        
     };
 
     // Processes queued scripts in the order they were queued
@@ -75,11 +80,12 @@
         script.type = 'text/javascript';
         script.onload = function() {
             if (typeof scriptObj.callback !== 'undefined') {
-                scriptObj.callback.apply(scriptObj.context, arguments);
+                scriptObj.callback.call(scriptObj.context);
             }
-            if (!scriptObj.hasIntCallback) { scriptLoading--; }
+            if (!scriptObj.isCallbackInt) { scriptLoading--; }
         };
         scriptLoading++;
+        scriptObj.scriptEl = script;
         docHead.appendChild(script);
     };
 
@@ -164,10 +170,8 @@
         'defineModel': function(className, classDef) { return new Model(className, classDef); },
         'defineAdapter': function(className, classDef) { return new Adapter(className, classDef); },
         'loadScript': queueScripts,
-        'loadScriptAsync': queueAsyncScript,
         'require': queueScripts,
-        'requireAsync': queueAsyncScript,
-        'loadJSONAsync': queueAsyncScript
+        'loadJSONP': queueScripts
     });
 
 })();

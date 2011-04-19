@@ -2,7 +2,7 @@ koko.defineModel('GoogleMaps', function() {
 
     this.getMap = function(eventData, callback, context) {
         if (typeof eventData.address === 'undefined') { throw 'Error: Call to getMap requires an address'; }
-        if (typeof google === 'undefined') { koko.requireAsync('http://maps.google.com/maps/api/js?sensor=false&callback='); }
+        if (typeof google === 'undefined') { koko.require('http://maps.google.com/maps/api/js?sensor=false&callback=', undefined, undefined, true); }
 
         this.dispatchEvent('Model:GoogleMaps:codeAddress', eventData, function(coords) {
             var latlng = new google.maps.LatLng(coords.Da, coords.Ea);
