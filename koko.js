@@ -25,32 +25,32 @@
 
     // Queues scripts to be processed later, ensuring that dependencies are handled appropriately
     // Queue processing method is called immediately and monitors the queue for new scripts
-    var queueScripts = function(scriptURLs, callback, context, isCallbackInt) {
+    var queueScripts = function(scriptURLs, async, callback, context, isCallbackInt) {
         if (typeof scriptURLs === 'undefined') { throw 'Error: Call to queueScripts requires scriptURLs to queue'; }
         if (typeof scriptURLs === 'string') { scriptURLs = (scriptURLs.replace(' ', '')).split(','); }
 
-        // Add internal callback functionality to scripts if requested
-        var localCallback;
+        // Add externally-accessible internal callback function to given scripts (for instances of JSONP requests, if needed)
+        var intCallback;
         if (typeof isCallbackInt !== 'undefined' && isCallbackInt === true) {
-            while(typeof extFWRef[localCallback = 'callback' + Math.floor(Math.random(Date.now())*101)] !== 'undefined'){}
-            extFWRef[localCallback] = function() {
+            while(typeof extFWRef[intCallback = 'callback' + Math.floor(Math.random(Date.now())*101)] !== 'undefined'){}
+            extFWRef[intCallback] = function() {
                 if (typeof callback !== 'undefined') { callback.apply(context || this, arguments); }
                 scriptLoading--;
-                delete extFWRef[localCallback];
+                delete extFWRef[intCallback];
             };
         }
 
         for (var scriptURL; typeof (scriptURL = scriptURLs.shift()) !== 'undefined';) {
-            var scriptObj = {'src':scriptURL, 'isCallbackInt':isCallbackInt || false};
+            var scriptObj = {'src':scriptURL, 'isCallbackInt':isCallbackInt || false };
             if (scriptURLs.length === 0) {
-                if (typeof localCallback !== 'undefined') {
-                    scriptObj.src += extFWName + '.' + localCallback;
+                if (typeof intCallback !== 'undefined') {
+                    scriptObj.src += extFWName + '.' + intCallback;
                 } else {
                     scriptObj.callback = callback;
                     scriptObj.context = context || this;
                 }
             }
-            scriptQueue.splice(scriptQueueIdx++, 0, scriptObj);
+            if (async === true) { loadScript(scriptObj); } else { scriptQueue.splice(scriptQueueIdx++, 0, scriptObj); }
         }
         
         scriptProcTimer = setTimeout(procScriptQueue, 11);
@@ -66,7 +66,7 @@
                 scriptQueueIdx = 0;
                 loadScript(scriptQueue.shift());
             }
-            else scriptProcTimer = setTimeout(procScriptQueue, 11);
+            scriptProcTimer = setTimeout(procScriptQueue, 11);
         }
     };
 
@@ -79,29 +79,29 @@
         script.src = scriptObj.src;
         script.type = 'text/javascript';
         script.onload = function() {
+            if (!scriptObj.isCallbackInt) { scriptLoading--; }
             if (typeof scriptObj.callback !== 'undefined') {
                 scriptObj.callback.call(scriptObj.context);
             }
-            if (!scriptObj.isCallbackInt) { scriptLoading--; }
         };
         scriptLoading++;
-        scriptObj.scriptEl = script;
+        scriptObj.scriptEl = script; console.log(scriptObj.src);
         docHead.appendChild(script);
     };
     
     // Loads external JSON-encoded data (local or remote) that has been wrapped by a callback
     // Callback is automatically executed on script load completion
     var loadJSONP = function(scriptURLs, callback, context) {
-        queueScripts(scriptURLs, callback, context, true);
+        queueScripts(scriptURLs, true, callback, context, true);
     };
 
     // Queues events to be dispatched later, ensuring that dependencies are handled appropriately
     // Queue processing method is called immediately and monitors the queue for new events
-    var queueEvents = function(eventNames, eventData, callback, context, dispatchDeny) {
+    var queueEvents = function(eventNames, eventData, callback, context, dispatchDeny, async) {
         if (typeof eventNames === 'undefined') return;
         if (typeof eventNames === 'string') { eventNames = (eventNames.replace(' ', '')).split(','); }
         for (var eventName; typeof (eventName = eventNames.shift()) !== 'undefined';) {
-            var eventObj = {'eventName':eventName,'eventData':eventData,'dispatchDeny':dispatchDeny};
+            var eventObj = {'eventName':eventName,'eventData':eventData,'dispatchDeny':dispatchDeny,'async':async || false};
             if (eventNames.length === 0) {
                 eventObj.callback = callback;
                 eventObj.context = context || this;
@@ -112,15 +112,15 @@
     };
 
     // Dispatches queued events in the order they were queued
-    // Events are dispatched only if no other events are currently being dispatched and no scripts remain to be processed
+    // Events are dispatched only if no scripts remain to be processed
     // Uses reference to a single event timer to ensure there is no overlap in queue processing
     var procEventQueue = function() {
         if (eventQueue.length > 0) {
-            if (scriptQueue.length === 0 && scriptLoading === 0 && eventLoadCount === 0) {
+            if (scriptQueue.length === 0 && scriptLoading === 0 && (eventLoadCount === 0 || eventQueue[0].async === true)) {
                 eventQueueIdx = 0;
                 dispatchEvent(eventQueue.shift());
             }
-            else eventProcTimer = setTimeout(procEventQueue, 13);
+            eventProcTimer = setTimeout(procEventQueue, 13);
         }
     };
 
@@ -146,8 +146,8 @@
     var EventManager = function(dispatchDeny) {
         
         // Allows each MVA object to dispatch MVA events
-        this.dispatchEvent = function(eventName, eventData, callback, context) {
-            queueEvents(eventName, eventData, callback, context || this, dispatchDeny);
+        this.dispatchEvent = function(eventName, eventData, callback, context, async) {
+            queueEvents(eventName, eventData, callback, context || this, dispatchDeny, async);
         };
         
         // Registers this MVA object as an event listener so it is able to accept incoming events
