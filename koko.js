@@ -98,10 +98,11 @@
     
     // Loads external script (local or remote) synchronously
     // Callback is automatically executed on script load completion
-    var require = function(scriptURLs, callback, context) {
+    var require = function(scriptURLs, callback, context, isCallbackInt) {
         if (typeof scriptURLs === 'undefined') { throw 'Error: Call to require requires URL to load'; }
+        if (typeof isCallbackInt === 'undefined') { isCallbackInt = false; }
         if (typeof context === 'undefined') { context = this; }
-        queueScripts(scriptURLs, false, callback, context, false);
+        queueScripts(scriptURLs, false, callback, context, isCallbackInt);
     };
     
     // Loads external JSON-encoded data (local or remote) that has been wrapped by a callback
