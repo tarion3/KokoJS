@@ -17,6 +17,8 @@
 
     // Utility function to see if the passed in object is an instance of any of the classes in the class array
     var isInstanceOf = function(obj, classArray) {
+        if (typeof obj !== 'object') { throw 'Error: Call to isInstanceOf requires object in arg[1]'; }
+        if (!(classArray instanceof Array)) { throw 'Error: Call to isInstanceOf requires classArray to be of type Array'; }
         for (var i = 0, c; typeof (c = classArray[i++]) !== 'undefined';) {
             if (obj instanceof c) return true;
         }
@@ -28,29 +30,32 @@
     var queueScripts = function(scriptURLs, async, callback, context, isCallbackInt) {
         if (typeof scriptURLs === 'undefined') { throw 'Error: Call to queueScripts requires scriptURLs to queue'; }
         if (typeof scriptURLs === 'string') { scriptURLs = (scriptURLs.replace(' ', '')).split(','); }
+        if (typeof async === 'undefined') { async = true; }
+        if (typeof context === 'undefined') { context = this; }
+        if (typeof isCallbackInt === 'undefined') { isCallbackInt = false; }
 
         // Add externally-accessible internal callback function to given scripts (for instances of JSONP requests, if needed)
         var intCallback;
-        if (typeof isCallbackInt !== 'undefined' && isCallbackInt === true) {
+        if (isCallbackInt === true) {
             while(typeof extFWRef[intCallback = 'callback' + Math.floor(Math.random(Date.now())*101)] !== 'undefined'){}
             extFWRef[intCallback] = function() {
-                if (typeof callback !== 'undefined') { callback.apply(context || this, arguments); }
+                if (typeof callback !== 'undefined') { callback.apply(context, arguments); }
                 scriptLoading--;
                 delete extFWRef[intCallback];
             };
         }
 
         for (var scriptURL; typeof (scriptURL = scriptURLs.shift()) !== 'undefined';) {
-            var scriptObj = {'src':scriptURL, 'isCallbackInt':isCallbackInt || false };
+            var scriptObj = {'src':scriptURL, 'async':async, 'isCallbackInt':isCallbackInt};
             if (scriptURLs.length === 0) {
                 if (typeof intCallback !== 'undefined') {
                     scriptObj.src += extFWName + '.' + intCallback;
                 } else {
                     scriptObj.callback = callback;
-                    scriptObj.context = context || this;
+                    scriptObj.context = context;
                 }
             }
-            if (async === true) { loadScript(scriptObj); } else { scriptQueue.splice(scriptQueueIdx++, 0, scriptObj); }
+            scriptQueue.splice(scriptQueueIdx++, 0, scriptObj);
         }
         
         scriptProcTimer = setTimeout(procScriptQueue, 11);
@@ -61,10 +66,13 @@
     // Scripts are processed only if no other script is currently being loaded
     // Uses reference to a single event timer to ensure there is no overlap in queue processing
     var procScriptQueue = function() {
+        var nextScript;
         if (scriptQueue.length > 0) {
-            if (scriptLoading === 0) {
+            if (scriptLoading === 0 || scriptQueue[0].async === true) {
                 scriptQueueIdx = 0;
-                loadScript(scriptQueue.shift());
+                nextScript = scriptQueue.shift();
+                if (nextScript.async === true) { setTimeout(function(){ loadScript(nextScript); }, 11); }
+                else loadScript(nextScript);
             }
             scriptProcTimer = setTimeout(procScriptQueue, 11);
         }
@@ -79,32 +87,45 @@
         script.src = scriptObj.src;
         script.type = 'text/javascript';
         script.onload = function() {
-            if (!scriptObj.isCallbackInt) { scriptLoading--; }
             if (typeof scriptObj.callback !== 'undefined') {
                 scriptObj.callback.call(scriptObj.context);
             }
+            if (scriptObj.isCallbackInt === false) { scriptLoading--; }
         };
         scriptLoading++;
-        scriptObj.scriptEl = script; console.log(scriptObj.src);
         docHead.appendChild(script);
+    };
+    
+    // Loads external script (local or remote) synchronously
+    // Callback is automatically executed on script load completion
+    var require = function(scriptURLs, callback, context) {
+        if (typeof scriptURLs === 'undefined') { throw 'Error: Call to require requires URL to load'; }
+        if (typeof context === 'undefined') { context = this; }
+        queueScripts(scriptURLs, false, callback, context, false);
     };
     
     // Loads external JSON-encoded data (local or remote) that has been wrapped by a callback
     // Callback is automatically executed on script load completion
-    var loadJSONP = function(scriptURLs, callback, context) {
-        queueScripts(scriptURLs, true, callback, context, true);
+    var loadJSONP = function(scriptURLs, callback, context, async) {
+        if (typeof scriptURLs === 'undefined') { throw 'Error: Call to loadJSONP requires URL to load'; }
+        if (typeof async === 'undefined') { async = false; }
+        if (typeof context === 'undefined') { context = this; }
+        queueScripts(scriptURLs, async, callback, context, true);
     };
 
     // Queues events to be dispatched later, ensuring that dependencies are handled appropriately
     // Queue processing method is called immediately and monitors the queue for new events
     var queueEvents = function(eventNames, eventData, callback, context, dispatchDeny, async) {
-        if (typeof eventNames === 'undefined') return;
+        if (typeof eventNames === 'undefined') { throw 'Error: Call to queueEvents requires eventName'; }
         if (typeof eventNames === 'string') { eventNames = (eventNames.replace(' ', '')).split(','); }
+        if (typeof context === 'undefined') { context = this; }
+        if (typeof async === 'undefined') { async = true; }
+        
         for (var eventName; typeof (eventName = eventNames.shift()) !== 'undefined';) {
-            var eventObj = {'eventName':eventName,'eventData':eventData,'dispatchDeny':dispatchDeny,'async':async || false};
+            var eventObj = {'eventName':eventName,'eventData':eventData,'dispatchDeny':dispatchDeny,'async':async};
             if (eventNames.length === 0) {
                 eventObj.callback = callback;
-                eventObj.context = context || this;
+                eventObj.context = context;
             }
             eventQueue.splice(eventQueueIdx++, 0, eventObj);
         }
@@ -115,10 +136,13 @@
     // Events are dispatched only if no scripts remain to be processed
     // Uses reference to a single event timer to ensure there is no overlap in queue processing
     var procEventQueue = function() {
+        var nextEvent;
         if (eventQueue.length > 0) {
-            if (scriptQueue.length === 0 && scriptLoading === 0 && (eventLoadCount === 0 || eventQueue[0].async === true)) {
+            if (scriptQueue.length === 0 && scriptLoading === 0 && (eventQueue[0].async === true || eventLoadCount === 0)) {
                 eventQueueIdx = 0;
-                dispatchEvent(eventQueue.shift());
+                nextEvent = eventQueue.shift();
+                if (nextEvent.async === true) { setTimeout(function(){ dispatchEvent(nextEvent); }, 13); }
+                else dispatchEvent(nextEvent);
             }
             eventProcTimer = setTimeout(procEventQueue, 13);
         }
@@ -134,7 +158,7 @@
             eventDestName = eventNameParts[1],  // event destination name
             eventDestFunc = eventNameParts[2];  // event destination function
         for (var i = 0, listener; typeof (listener = eventListeners[i++]) !== 'undefined';) {
-            if (!isInstanceOf(listener, eventObj.dispatchDeny) && (listener.type === eventDestType) && (listener.name === eventDestName) && typeof (eventFunc = listener[eventDestFunc]) !== 'undefined') {
+            if (isInstanceOf(listener, eventObj.dispatchDeny) === false && (listener.type === eventDestType) && (listener.name === eventDestName) && typeof (eventFunc = listener[eventDestFunc]) !== 'undefined') {
                 eventLoadCount++;
                 eventFunc.call(listener, eventObj.eventData, eventObj.callback, eventObj.context);
                 eventLoadCount--;
@@ -147,7 +171,7 @@
         
         // Allows each MVA object to dispatch MVA events
         this.dispatchEvent = function(eventName, eventData, callback, context, async) {
-            queueEvents(eventName, eventData, callback, context || this, dispatchDeny, async);
+            queueEvents(eventName, eventData, callback, context, dispatchDeny, async);
         };
         
         // Registers this MVA object as an event listener so it is able to accept incoming events
@@ -176,7 +200,7 @@
         'defineModel': function(className, classDef) { return new Model(className, classDef); },
         'defineAdapter': function(className, classDef) { return new Adapter(className, classDef); },
         'loadScript': queueScripts,
-        'require': queueScripts,
+        'require': require,
         'loadJSONP': loadJSONP
     });
 

@@ -1,6 +1,6 @@
 koko.defineAdapter('Twitter', function() {
 
-    koko.require('./models/Twitter.js', true);
+    koko.require('./models/Twitter.js');
 
     var feedParser = function(feedData) {
         var feedHTML = '<table>';
@@ -31,7 +31,7 @@ koko.defineAdapter('Twitter', function() {
 
 koko.defineAdapter('Picasa', function() {
     
-    koko.require('./models/Picasa.js', true);
+    koko.require('./models/Picasa.js');
     
     var feedParser = function(feedData) {
         var feedHTML = '<table><tr>', imgCount = 0;
@@ -54,7 +54,7 @@ koko.defineAdapter('Picasa', function() {
 
 koko.defineAdapter('Google', function() {
     
-    koko.require('./models/Google.js', true);
+    koko.require('./models/Google.js');
     
     this.loadMap = function(eventData, callback, context) {
         this.dispatchEvent('Model:GoogleMaps:getMap', eventData);

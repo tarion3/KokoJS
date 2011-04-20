@@ -51,12 +51,12 @@
             };
         });
         
-        koko.require('http://ajax.googleapis.com/ajax/libs/jquery/1.5.2/jquery.min.js', true, function(){
+        koko.require('http://ajax.googleapis.com/ajax/libs/jquery/1.5.2/jquery.min.js', function(){
         
             $(document).ready(function() {
                 myView.getPhotos('travis.ard');
-                myView.getTweets();
                 myView.loadMap('salem, mo', 'map');
+                myView.getTweets();
             });
         
         });
