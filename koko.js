@@ -71,7 +71,7 @@
         return function() {
             console.log('Loaded:', scriptObj.src);
             if (scriptObj.isCallbackInt === false) {
-                scriptLoadCount--; console.log(scriptLoadCount);
+                scriptLoadCount--;
                 if (scriptObj.async === false) { setTimeout(loadNextScript, 10); }
                 if (typeof scriptObj.callback === 'function') { scriptObj.callback.call(scriptObj.context, arguments); }
             }
