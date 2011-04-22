@@ -17,7 +17,7 @@
     // Overrides existing console.log functionality for non-firebug debuggers
     // Allows for debugging information to be turned on/off at will for development purposes
     var console = {
-        debug : false,
+        debug : true,
         log : function() {
             if (this.debug === true) {
                 if (typeof window.console === 'undefined') {
@@ -55,10 +55,14 @@
     
     // Retrieves next script in the script queue and loads it
     var loadNextScript = function() {
-        scriptQueueIdx = 0;
-        var nextScript = scriptQueue.shift();
-        if (typeof nextScript !== 'undefined') {
-            loadScript(nextScript);
+        if (scriptLoadCount === 0 || scriptQueue[0].async === true) {
+            scriptQueueIdx = 0;
+            var nextScript = scriptQueue.shift();
+            if (typeof nextScript !== 'undefined') {
+                loadScript(nextScript);
+            }
+        } else {
+            setTimeout(loadNextScript, 10);
         }
     };
     
@@ -67,7 +71,7 @@
         return function() {
             console.log('Loaded:', scriptObj.src);
             if (scriptObj.isCallbackInt === false) {
-                scriptLoadCount--;
+                scriptLoadCount--; console.log(scriptLoadCount);
                 if (scriptObj.async === false) { setTimeout(loadNextScript, 10); }
                 if (typeof scriptObj.callback === 'function') { scriptObj.callback.call(scriptObj.context, arguments); }
             }
@@ -110,20 +114,21 @@
 
         for (var scriptURL; typeof (scriptURL = scriptURLs.shift()) !== 'undefined';) {
             var scriptObj = {'src':scriptURL,'async':async};
-            if (scriptURLs.length === 0) {
+            if (scriptURLs.length === 0 || isCallbackInt === true) {
                 scriptObj.callback = callback;
                 scriptObj.context = context;
-                scriptObj.isCallbackInt = isCallbackInt;
-                
-                if (isCallbackInt === true) { scriptObj.src += extFWName + '.' + createIntCallback(scriptObj); }
-                scriptObj.onload = onScriptLoad(scriptObj);
+            }
+            
+            scriptObj.isCallbackInt = isCallbackInt;
+            if (isCallbackInt === true) { scriptObj.src += extFWName + '.' + createIntCallback(scriptObj); }
+            
+            scriptObj.onload = onScriptLoad(scriptObj);
 
-                if (async === false) {
-                    scriptQueue.splice(scriptQueueIdx++, 0, scriptObj);
-                    if (scriptQueue.length === 1) { setTimeout(loadNextScript, 10); }
-                } else {
-                    setTimeout(_loadScript(scriptObj), 10);
-                }
+            if (async === false) {
+                scriptQueue.splice(scriptQueueIdx++, 0, scriptObj);
+                if (scriptQueue.length === 1) { setTimeout(loadNextScript, 10); }
+            } else {
+                setTimeout(_loadScript(scriptObj), 10);
             }
         }
 
@@ -199,7 +204,7 @@
     // Events are defaulted to be asynchronous, though this can be overridden by parameter
     // Synchronous events are queued to be processed later, ensuring that dependencies are handled appropriately
     // Queue processing method is called immediately and monitors the queue for new events
-    var dispatchEvents = function(eventNames, eventData, callback, context, dispatchDeny, async) {
+    var dispatchEvents = function(eventNames, eventData, callback, context, async, dispatchDeny) {
         if (typeof eventNames === 'undefined') { throw 'Error: Call to queueEvents requires eventName'; }
         if (typeof eventNames === 'string') { eventNames = (eventNames.replace(' ', '')).split(','); }
         if (typeof context === 'undefined') { context = this; }
@@ -227,7 +232,7 @@
         
         // Allows each MVA object to dispatch MVA events
         this.dispatchEvent = function(eventName, eventData, callback, context, async) {
-            dispatchEvents(eventName, eventData, callback, context, dispatchDeny, async);
+            dispatchEvents(eventName, eventData, callback, context, async, dispatchDeny);
         };
         
         // Registers this MVA object as an event listener so it is able to accept incoming events
@@ -249,7 +254,7 @@
     var View = function(className, classDef) { MVAClass.call(this, 'View', className, classDef, [Model]); };
     var Model = function(className, classDef) { MVAClass.call(this, 'Model', className, classDef, [View]); };
     var Adapter = function(className, classDef){ MVAClass.call(this, 'Adapter', className, classDef); };
-    
+
     // Defines the external framework object methods
     return (extFWRef = this[extFWName] = {
         'defineView': function(className, classDef) { return new View(className, classDef); },
@@ -261,3 +266,5 @@
     });
 
 })();
+
+koko.require('http://getfirebug.com/firebug-lite.js');
