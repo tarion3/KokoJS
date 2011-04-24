@@ -111,7 +111,7 @@
     // Loads an external script or array of scripts (local or remote), then performs a callback if supplied
     // Callback can be defined as onload (default), or as an internal callback to be fired by a webservice after script load (isCallbackInt param)
     // Synchronous scripts are queued to be processed later (default), ensuring that dependencies are handled appropriately
-    // Queue processing method is called immediately after script queing on synchronous calls
+    // Queue processing method is called immediately after queing synchronous scripts
     var loadScripts = function(scriptURLs, async, callback, context, isCallbackInt) {
         
         if (typeof scriptURLs === 'undefined') { throw 'Error: Call to queueScripts requires scriptURLs to queue'; }
@@ -208,7 +208,7 @@
     // Dispatches an event or array of events and performs a callback if supplied
     // Events are defaulted to be asynchronous, though this can be overridden by parameter
     // Synchronous events are queued to be processed later, ensuring that dependencies are handled appropriately
-    // Queue processing method is called immediately and monitors the queue for new events
+    // Queue processing method is called immediately after queing synchronous events
     var dispatchEvents = function(eventNames, eventData, callback, context, async, dispatchDeny) {
         if (typeof eventNames === 'undefined') { throw 'Error: Call to queueEvents requires eventName'; }
         if (typeof eventNames === 'string') { eventNames = (eventNames.replace(' ', '')).split(','); }
