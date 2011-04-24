@@ -54,14 +54,10 @@ koko.defineAdapter('Picasa', function() {
 
 koko.defineAdapter('Google', function() {
     
-    koko.require(['./models/GoogleMaps.js', './models/GoogleCalendar.js']);
+    koko.require('./models/GoogleMaps.js');
     
     this.loadMap = function(eventData, callback, context) {
         this.dispatchEvent('Model:GoogleMaps:getMap', eventData);
-    };
-    
-    this.getCalendar = function(eventData, callback, context) {
-        this.dispatchEvent('Model:GoogleCalendar:getCalendar', eventData, callback, context);
     };
     
 });

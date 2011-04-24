@@ -18,7 +18,7 @@
     // Allows for debugging information to be turned on/off at will for development purposes
     var consoleLog = [], loadingFirebug = false;
     var console = {
-        debug : true,
+        debug : false,
         log : function() {
             if (this.debug === true) {
                 consoleLog.push(arguments);
@@ -110,13 +110,14 @@
 
     // Loads an external script or array of scripts (local or remote), then performs a callback if supplied
     // Callback can be defined as onload (default), or as an internal callback to be fired by a webservice after script load (isCallbackInt param)
-    // Synchronous scripts are queued to be processed later (default), ensuring that dependencies are handled appropriately
+    // Scripts are defaulted to be asynchronous, though this can be changed by parameter
+    // Synchronous scripts are queued to be processed later, ensuring that dependencies are handled appropriately
     // Queue processing method is called immediately after queing synchronous scripts
     var loadScripts = function(scriptURLs, async, callback, context, isCallbackInt) {
         
         if (typeof scriptURLs === 'undefined') { throw 'Error: Call to queueScripts requires scriptURLs to queue'; }
         if (typeof scriptURLs === 'string') { scriptURLs = (scriptURLs.replace(' ', '')).split(','); }
-        if (typeof async === 'undefined') { async = false; }
+        if (typeof async === 'undefined') { async = true; }
         if (typeof context === 'undefined') { context = this; }
         if (typeof isCallbackInt !== 'boolean') { isCallbackInt = false; }
 
@@ -267,7 +268,8 @@
         'defineAdapter': function(className, classDef) { return new Adapter(className, classDef); },
         'loadScript': loadScripts,
         'require': require,
-        'loadJSONP': loadJSONP
+        'loadJSONP': loadJSONP,
+        'console': console
     });
 
 })();
