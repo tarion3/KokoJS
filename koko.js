@@ -16,14 +16,21 @@
     // Debugging system implimentation
     // Overrides existing console.log functionality for non-firebug debuggers
     // Allows for debugging information to be turned on/off at will for development purposes
+    var consoleLog = [], loadingFirebug = false;
     var console = {
         debug : true,
         log : function() {
             if (this.debug === true) {
+                consoleLog.push(arguments);
                 if (typeof window.console === 'undefined') {
-                    alert(arguments);
-                } else {
-                    window.console.log(arguments);
+                    if (!loadingFirebug) {
+                        loadingFirebug = true;
+                        koko.require('http://getfirebug.com/firebug-lite.js', function() { loadingFirebug = false; });
+                    }
+                } else if (!loadingFirebug) {
+                    while (consoleLog.length > 0) {
+                        window.console.log(consoleLog.shift());
+                    }
                 }
             }
         }
@@ -41,10 +48,10 @@
 
     // Loads a given script by appending a new script element to the document head
     var loadScript = function(scriptObj) {
-        var script = document.createElement('script');
+        var script = scriptObj.script = document.createElement('script');
         script.src = scriptObj.src;
         script.type = 'text/javascript';
-        script.onload = scriptObj.onload;
+        script.onload = onScriptLoad(scriptObj);
         script.onreadystatuschange = function(status) {
             if (status === 'complete') { script.onload.call(this); }
         };
@@ -52,7 +59,20 @@
         scriptLoadCount++;
         document.getElementsByTagName('head')[0].appendChild(script);
     };
-    
+
+    // Defines onload handler for a script object
+    var onScriptLoad = function(scriptObj) {
+        return function() {
+            console.log('Loaded:', scriptObj.src);
+            document.getElementsByTagName('head')[0].removeChild(scriptObj.script);
+            if (scriptObj.isCallbackInt === false) {
+                scriptLoadCount--;
+                if (scriptObj.async === false) { setTimeout(loadNextScript, 10); }
+                if (typeof scriptObj.callback === 'function') { scriptObj.callback.call(scriptObj.context, arguments); }
+            }
+        };
+    };
+
     // Retrieves next script in the script queue and loads it
     var loadNextScript = function() {
         if (scriptLoadCount === 0 || scriptQueue[0].async === true) {
@@ -64,18 +84,6 @@
         } else {
             setTimeout(loadNextScript, 10);
         }
-    };
-    
-    // Defines onload handler for a script object
-    var onScriptLoad = function(scriptObj) {
-        return function() {
-            console.log('Loaded:', scriptObj.src);
-            if (scriptObj.isCallbackInt === false) {
-                scriptLoadCount--;
-                if (scriptObj.async === false) { setTimeout(loadNextScript, 10); }
-                if (typeof scriptObj.callback === 'function') { scriptObj.callback.call(scriptObj.context, arguments); }
-            }
-        };
     };
     
     // Creates an internal callback for scripts that require one
@@ -100,10 +108,10 @@
         };
     };
 
-    // Loads an external script or array of scripts (local or remote) and performs a callback if supplied
-    // Callback can be defined as explicitly onload, or as an internal callback to be fired by a webservice after script load
-    // Synchronous scripts are queued to be processed later, ensuring that dependencies are handled appropriately
-    // Queue processing method is called immediately and monitors the queue for new scripts
+    // Loads an external script or array of scripts (local or remote), then performs a callback if supplied
+    // Callback can be defined as onload (default), or as an internal callback to be fired by a webservice after script load (isCallbackInt param)
+    // Synchronous scripts are queued to be processed later (default), ensuring that dependencies are handled appropriately
+    // Queue processing method is called immediately after script queing on synchronous calls
     var loadScripts = function(scriptURLs, async, callback, context, isCallbackInt) {
         
         if (typeof scriptURLs === 'undefined') { throw 'Error: Call to queueScripts requires scriptURLs to queue'; }
@@ -113,16 +121,13 @@
         if (typeof isCallbackInt !== 'boolean') { isCallbackInt = false; }
 
         for (var scriptURL; typeof (scriptURL = scriptURLs.shift()) !== 'undefined';) {
-            var scriptObj = {'src':scriptURL,'async':async};
-            if (scriptURLs.length === 0 || isCallbackInt === true) {
+            var scriptObj = {'src':scriptURL,'async':async,'isCallbackInt':isCallbackInt};
+            if (scriptURLs.length === 0) {
                 scriptObj.callback = callback;
                 scriptObj.context = context;
             }
             
-            scriptObj.isCallbackInt = isCallbackInt;
             if (isCallbackInt === true) { scriptObj.src += extFWName + '.' + createIntCallback(scriptObj); }
-            
-            scriptObj.onload = onScriptLoad(scriptObj);
 
             if (async === false) {
                 scriptQueue.splice(scriptQueueIdx++, 0, scriptObj);
@@ -266,5 +271,3 @@
     });
 
 })();
-
-koko.require('http://getfirebug.com/firebug-lite.js');
