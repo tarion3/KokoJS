@@ -77,11 +77,10 @@
     // Retrieves next script in the script queue and loads it
     var loadNextScript = function() {
         
-        if (scriptLoadCount === 0 || scriptQueue[0].async === true) {
+        if (scriptQueue.length && (scriptLoadCount === 0 || scriptQueue[0].async === true)) {
             
             scriptQueueIdx = 0;
-            var nextScript = scriptQueue.shift();
-            if (typeof nextScript !== 'undefined') { loadScript(nextScript); }
+            loadScript(scriptQueue.shift());
             
         } else { setTimeout(loadNextScript, 10); }
         
