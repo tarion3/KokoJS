@@ -1,8 +1,7 @@
 (function(){
     
     var extFWName = 'koko',         // Global framework object name
-        extFWRef,                   // Global framework object reference
-        emptyFunc = function(){};   // Reference to empty function for defaults usage
+        extFWRef;                   // Global framework object reference
 
     var scriptQueue = [],           // Queue for all scripts waiting to be loaded
         scriptQueueIdx = 0,         // Index pointing to the next place in the script queue to place a script - used for dependency checking
@@ -16,94 +15,99 @@
     // Debugging system implimentation
     // Overrides existing console.log functionality for non-firebug debuggers
     // Allows for debugging information to be turned on/off at will for development purposes
-    var consoleLog = [], loadingFirebug = false;
-    var console = {
-        debug : false,
+    var console = { debug : false, queue : [], loading : false,
         log : function() {
             if (this.debug === true) {
-                consoleLog.push(arguments);
+                this.queue.push(arguments);
                 if (typeof window.console === 'undefined') {
-                    if (!loadingFirebug) {
-                        loadingFirebug = true;
-                        koko.require('http://getfirebug.com/firebug-lite.js', function() { loadingFirebug = false; });
-                    }
-                } else if (!loadingFirebug) {
-                    while (consoleLog.length > 0) {
-                        window.console.log(consoleLog.shift());
+                    if (!this.loading) {
+                        this.loading = true;
+                        koko.require('http://getfirebug.com/firebug-lite.js', function() { this.loading = false; });
                     }
                 }
+                else if (!this.loading) { while (this.queue.length > 0) { window.console.log(this.queue.shift()); } }
             }
         }
     };
 
     // Utility function to see if the passed in object is an instance of any of the classes in the given class array
     var isInstanceOf = function(obj, classArray) {
+        
         if (typeof obj !== 'object') { throw 'Error: Call to isInstanceOf requires object in arg[1]'; }
         if (!(classArray instanceof Array)) { throw 'Error: Call to isInstanceOf requires classArray to be of type Array'; }
+        
         for (var i = 0, c; typeof (c = classArray[i++]) !== 'undefined';) {
             if (obj instanceof c) return true;
         }
+        
         return false;
     };
 
     // Loads a given script by appending a new script element to the document head
     var loadScript = function(scriptObj) {
+        
         var script = scriptObj.script = document.createElement('script');
         script.src = scriptObj.src;
         script.type = 'text/javascript';
         script.onload = onScriptLoad(scriptObj);
-        script.onreadystatuschange = function(status) {
-            if (status === 'complete') { script.onload.call(this); }
-        };
+        script.onreadystatuschange = function(status) { if (status === 'complete') { script.onload.call(this); } };
+        
         scriptLoadCount++;
         document.getElementsByTagName('head')[0].appendChild(script);
+        
     };
 
     // Defines onload handler for a script object
     var onScriptLoad = function(scriptObj) {
+        
         return function() {
+            
             document.getElementsByTagName('head')[0].removeChild(scriptObj.script);
+            
             if (scriptObj.isCallbackInt === false) {
                 scriptLoadCount--;
                 if (scriptObj.async === false) { setTimeout(loadNextScript, 10); }
                 if (typeof scriptObj.callback === 'function') { scriptObj.callback.call(scriptObj.context, arguments); }
             }
+            
         };
+        
     };
 
     // Retrieves next script in the script queue and loads it
     var loadNextScript = function() {
+        
         if (scriptLoadCount === 0 || scriptQueue[0].async === true) {
+            
             scriptQueueIdx = 0;
             var nextScript = scriptQueue.shift();
-            if (typeof nextScript !== 'undefined') {
-                loadScript(nextScript);
-            }
-        } else {
-            setTimeout(loadNextScript, 10);
-        }
+            if (typeof nextScript !== 'undefined') { loadScript(nextScript); }
+            
+        } else { setTimeout(loadNextScript, 10); }
+        
     };
     
     // Creates an internal callback for scripts that require one
     var createIntCallback = function(scriptObj) {
+        
         var intCallback;
+        
         while(typeof extFWRef[intCallback = 'callback' + Math.floor(Math.random(Date.now())*101)] !== 'undefined'){}
+        
         extFWRef[intCallback] = function() {
             scriptLoadCount--;
             if (scriptObj.async === false) { setTimeout(loadNextScript, 10); }
             if (typeof scriptObj.callback === 'function') { scriptObj.callback.apply(scriptObj.context, arguments); }
             delete extFWRef[intCallback];
         };
+        
         return intCallback;
+        
     };
     
     // Internal implimentation of the loadScript function
     // Used as a wrapper for setTimeout calls
-    var _loadScript = function(scriptObj) {
-        return function() {
-            loadScript(scriptObj);
-        };
-    };
+    var _loadScript = function(scriptObj) { return function() { loadScript(scriptObj); }; };
 
     // Loads an external script or array of scripts (local or remote), then performs a callback if supplied
     // Callback can be defined as onload (default), or as an internal callback to be fired by a webservice after script load (isCallbackInt param)
@@ -130,9 +134,11 @@
             if (async === false) {
                 scriptQueue.splice(scriptQueueIdx++, 0, scriptObj);
                 if (scriptQueue.length === 1) { setTimeout(loadNextScript, 10); }
-            } else {
+            } 
+            else {
                 setTimeout(_loadScript(scriptObj), 10);
             }
+            
         }
 
     };
@@ -140,26 +146,35 @@
     // Loads external script (local or remote) synchronously
     // Callback is automatically executed on script load completion
     var require = function(scriptURLs, callback, context, isCallbackInt) {
+        
         if (typeof scriptURLs === 'undefined') { throw 'Error: Call to require requires URL to load'; }
         if (typeof context === 'undefined') { context = this; }
         if (typeof isCallbackInt === 'undefined') { isCallbackInt = false; }
+        
         loadScripts(scriptURLs, false, callback, context, isCallbackInt);
+        
     };
     
     // Loads external JSON-encoded data (local or remote) that has been wrapped by a callback
     // Callback is automatically executed on script load completion
     var loadJSONP = function(scriptURLs, callback, context, async) {
+        
         if (typeof scriptURLs === 'undefined') { throw 'Error: Call to loadJSONP requires URL to load'; }
         if (typeof async === 'undefined') { async = true; }
         if (typeof context === 'undefined') { context = this; }
+        
         loadScripts(scriptURLs, async, callback, context, true);
+        
     };
 
     // Dispatches an event
     // Events are dispatched only if the name meets the format criteria: Class:Name:Method
     var dispatchEvent = function(eventObj) {
+        
         var eventNameParts, eventFunc;
+        
         if ((eventNameParts = eventObj.eventName.split(':')).length < 3) { throw 'Error: Event names must be of the format Class:Name:Method'; }
+        
         var eventDestType = eventNameParts[0],              // destination type/class
             eventDestName = eventNameParts[1],              // event destination name
             eventDestFunc = eventNameParts[2].split('.');   // event destination function - includes base function and optional subroutine
@@ -174,36 +189,33 @@
                 }
             }
         }
+        
         if (eventObj.async === false) { setTimeout(dispatchNextEvent, 10); }
+        
     };
 
     // Waits for all scripts to be loaded and then executes a callback
     // Used for event dispatch purposes, as no event can be dispatched until scripts are loaded
     var waitForScripts = function(callback) {
-        if (scriptQueue.length === 0 && scriptLoadCount === 0) {
-            setTimeout(callback, 10);
-        } else {
-            setTimeout(function(){ waitForScripts(callback); }, 10);
-        }
+        
+        if (scriptQueue.length === 0 && scriptLoadCount === 0) { setTimeout(callback, 10); }
+        else { setTimeout(function(){ waitForScripts(callback); }, 10); }
+
     };
 
     // Retrieves next event from the event queue and dispatches it
     var dispatchNextEvent = function() {
+        
         eventQueueIdx = 0;
         var nextEvent = eventQueue.shift();
-        if (typeof nextEvent !== 'undefined') {
-            setTimeout(_dispatchEvent(nextEvent), 10);
-        }
+        if (typeof nextEvent !== 'undefined') { setTimeout(_dispatchEvent(nextEvent), 10); }
+        
     };
 
     // Internal implimentation of dispatchEvent
     // Used as a wrapper for setTimout calls
     var _dispatchEvent = function(eventObj) {
-        return function() {
-            waitForScripts(function() {
-                dispatchEvent(eventObj);
-            });
-        };
+        return function() { waitForScripts(function() { dispatchEvent(eventObj); }); };
     };
 
     // Dispatches an event or array of events and performs a callback if supplied
@@ -211,6 +223,7 @@
     // Synchronous events are queued to be processed later, ensuring that dependencies are handled appropriately
     // Queue processing method is called immediately after queing synchronous events
     var dispatchEvents = function(eventNames, eventData, callback, context, async, dispatchDeny) {
+        
         if (typeof eventNames === 'undefined') { throw 'Error: Call to queueEvents requires eventName'; }
         if (typeof eventNames === 'string') { eventNames = (eventNames.replace(' ', '')).split(','); }
         if (typeof context === 'undefined') { context = this; }
@@ -226,16 +239,19 @@
             if (async === false) {
                 eventQueue.splice(eventQueueIdx++, 0, eventObj);
                 if (eventQueue.length === 1) { setTimeout(dispatchNextEvent, 10); }
-            } else {
-                setTimeout(_dispatchEvent(eventObj), 10);
             }
-
+            else { 
+                setTimeout(_dispatchEvent(eventObj), 10); 
+            }
+            
         }
+
     };
     
     // Allows for otherwise static variables to become dynamic setters/getters
     // Includes methods for notifying observers of changes
     var observable = function(initValue) {
+        
         var _value = initValue;
         var _observers = [];
 
@@ -254,6 +270,7 @@
         newFunc.bind = function(observer) { _observers.push(observer); };
         
         return newFunc;
+        
     };
 
     // Mixin that extends event management capability to all MVA classes
