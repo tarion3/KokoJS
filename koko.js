@@ -1,7 +1,8 @@
 (function(){
     
     var extFWName = 'koko',         // Global framework object name
-        extFWRef;                   // Global framework object reference
+        extFWRef,                   // Global framework object reference
+        emptyFunc = function(){};
 
     var scriptQueue = [],           // Queue for all scripts waiting to be loaded
         scriptQueueIdx = 0,         // Index pointing to the next place in the script queue to place a script - used for dependency checking
@@ -225,6 +226,7 @@
         
         if (typeof eventNames === 'undefined') { throw 'Error: Call to queueEvents requires eventName'; }
         if (typeof eventNames === 'string') { eventNames = (eventNames.replace(' ', '')).split(','); }
+        if (typeof callback === 'undefined') { callback = emptyFunc; }
         if (typeof context === 'undefined') { context = this; }
         if (typeof async === 'undefined') { async = true; }
 

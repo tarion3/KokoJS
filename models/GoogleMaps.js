@@ -17,6 +17,7 @@ koko.defineModel('GoogleMaps', function() {
                 map: map,
                 position: coords
             });
+            callback.call(context);
         });
     };
     
