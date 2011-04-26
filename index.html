@@ -29,7 +29,7 @@
                         document.getElementById('tweets').innerHTML = result;
                     });
                 } else {
-                    this.dispatchEvent('Adapter:Twitter:getPublicTweets', null, function(result) {
+                    this.dispatchEvent('Adapter:Twitter:getPublicTweets', undefined, function(result) {
                         document.getElementById('tweets').innerHTML = result;
                     });
                 }

@@ -82,3 +82,9 @@ koko.defineAdapter('YouTube', function() {
     };
     
 });
+
+koko.defineAdapter('Security', function() {
+    
+    koko.require('./models/Security.js');
+    
+});

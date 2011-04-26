@@ -55,7 +55,6 @@
         script.onreadystatuschange = function(status) {
             if (status === 'complete') { script.onload.call(this); }
         };
-        console.log('Loading:', scriptObj.src);
         scriptLoadCount++;
         document.getElementsByTagName('head')[0].appendChild(script);
     };
@@ -63,7 +62,6 @@
     // Defines onload handler for a script object
     var onScriptLoad = function(scriptObj) {
         return function() {
-            console.log('Loaded:', scriptObj.src);
             document.getElementsByTagName('head')[0].removeChild(scriptObj.script);
             if (scriptObj.isCallbackInt === false) {
                 scriptLoadCount--;
@@ -91,7 +89,6 @@
         var intCallback;
         while(typeof extFWRef[intCallback = 'callback' + Math.floor(Math.random(Date.now())*101)] !== 'undefined'){}
         extFWRef[intCallback] = function() {
-            console.log('Internal Callback:', intCallback);
             scriptLoadCount--;
             if (scriptObj.async === false) { setTimeout(loadNextScript, 10); }
             if (typeof scriptObj.callback === 'function') { scriptObj.callback.apply(scriptObj.context, arguments); }
@@ -163,15 +160,18 @@
     var dispatchEvent = function(eventObj) {
         var eventNameParts, eventFunc;
         if ((eventNameParts = eventObj.eventName.split(':')).length < 3) { throw 'Error: Event names must be of the format Class:Name:Method'; }
-        var eventDestType = eventNameParts[0],  // destination type/class
-            eventDestName = eventNameParts[1],  // event destination name
-            eventDestFunc = eventNameParts[2];  // event destination function
-        console.log('dispatching', eventObj.eventName);
+        var eventDestType = eventNameParts[0],              // destination type/class
+            eventDestName = eventNameParts[1],              // event destination name
+            eventDestFunc = eventNameParts[2].split('.');   // event destination function - includes base function and optional subroutine
+
         for (var i = 0, listener; typeof (listener = eventListeners[i++]) !== 'undefined';) {
-            if (isInstanceOf(listener, eventObj.dispatchDeny) === false && (listener.type === eventDestType) && (listener.name === eventDestName) && typeof (eventFunc = listener[eventDestFunc]) !== 'undefined') {
-                eventDispatchCount++;
-                eventFunc.call(listener, eventObj.eventData, eventObj.callback, eventObj.context);
-                eventDispatchCount--;
+            if (isInstanceOf(listener, eventObj.dispatchDeny) === false && (listener.type === eventDestType) && (listener.name === eventDestName)) {
+                if (typeof (eventFunc = listener[eventDestFunc[0]]) !== 'undefined') {
+                    if (typeof eventDestFunc[1] !== 'undefined') { eventFunc = eventFunc[eventDestFunc[1]]; }
+                    eventDispatchCount++;
+                    eventFunc.call(listener, eventObj.eventData, eventObj.callback, eventObj.context);
+                    eventDispatchCount--;
+                }
             }
         }
         if (eventObj.async === false) { setTimeout(dispatchNextEvent, 10); }
@@ -232,6 +232,29 @@
 
         }
     };
+    
+    // Allows for otherwise static variables to become dynamic setters/getters
+    // Includes methods for notifying observers of changes
+    var observable = function(initValue) {
+        var _value = initValue;
+        var _observers = [];
+
+        var onchange = function() {
+            for (var i = 0, observer; typeof (observer = _observers[i++]) !== 'undefined';) {
+                observer.call(this, _value);
+            }
+        };
+        
+        var newFunc = function(eventData, callback, context) {
+            if (typeof eventData !== 'undefined') { onchange(_value = eventData); }
+            if (typeof callback === 'function') { callback.call(context || this, _value); }
+            return _value;
+        };
+        
+        newFunc.bind = function(observer) { _observers.push(observer); };
+        
+        return newFunc;
+    };
 
     // Mixin that extends event management capability to all MVA classes
     var EventManager = function(dispatchDeny) {
@@ -251,8 +274,8 @@
     var MVAClass = function(classType, className, classDef, dispatchDeny) {
         if (typeof classType !== 'undefined') { this.type = classType; } else { throw 'Error: Class type required to create a new class.'; }
         if (typeof className !== 'undefined') { this.name = className; } else { throw 'Error: Class name required to create a new class.'; }
-        if (typeof classDef !== 'undefined') { classDef.call(this); }
         EventManager.call(this, dispatchDeny || []);
+        if (typeof classDef !== 'undefined') { classDef.call(this); }
     };
     
     // Available MVA classes that can be instantiated as objects for event-driven communication
@@ -269,7 +292,8 @@
         'loadScript': loadScripts,
         'require': require,
         'loadJSONP': loadJSONP,
-        'console': console
+        'console': console,
+        'observable': observable
     });
 
 })();
