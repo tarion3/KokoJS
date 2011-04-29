@@ -1,4 +1,4 @@
-koko.defineModel('Twitter', function() {
+koko.Model('Twitter', function() {
     
     // Returns the top 20 tweets from the public timeline
     this.getPublicTweets = function(eventData, callback, context) {

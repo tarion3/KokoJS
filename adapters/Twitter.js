@@ -1,4 +1,4 @@
-koko.defineAdapter('Twitter', function() {
+koko.Adapter('Twitter', function() {
 
     koko.require('./models/Twitter.js');
 
@@ -14,7 +14,7 @@ koko.defineAdapter('Twitter', function() {
         feedHTML += '</table>';
         return feedHTML;
     };
-    
+
     this.getPublicTweets = function(eventData, callback, context) {
         this.dispatchEvent('Model:Twitter:getPublicTweets', eventData, function(feedData) {
             callback.call(context, feedParser(feedData));

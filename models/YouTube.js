@@ -1,4 +1,4 @@
-koko.defineModel('YouTube', function() {
+koko.Model('YouTube', function() {
     
     this.getUserVideos = function (eventData, callback, context) {
         if (typeof eventData.username === 'undefined') { throw 'Error: Call to getUserVideos requires username.'; }

@@ -1,4 +1,4 @@
-koko.defineAdapter('Picasa', function() {
+koko.Adapter('Picasa', function() {
     
     koko.require('./models/Picasa.js');
     

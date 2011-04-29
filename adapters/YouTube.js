@@ -1,4 +1,4 @@
-koko.defineAdapter('YouTube', function() {
+koko.Adapter('YouTube', function() {
     
     koko.require('./models/YouTube.js');
     

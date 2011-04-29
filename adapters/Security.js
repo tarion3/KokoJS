@@ -1,4 +1,4 @@
-koko.defineAdapter('Security', function() {
+koko.Adapter('Security', function() {
     
     koko.require('./models/Security.js');
     

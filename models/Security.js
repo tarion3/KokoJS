@@ -1,4 +1,4 @@
-koko.defineModel('Security', function() {
+koko.Model('Security', function() {
     
     this.userKey = koko.observable();
     

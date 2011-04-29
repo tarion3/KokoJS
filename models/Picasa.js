@@ -1,4 +1,4 @@
-koko.defineModel('Picasa', function() {
+koko.Model('Picasa', function() {
 
     // return top 10 most recent photos
     this.getRecentPhotos = function(eventData, callback, context) {

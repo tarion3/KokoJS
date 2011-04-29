@@ -304,9 +304,9 @@
 
     // Defines the external framework object methods
     return (extFWRef = this[extFWName] = {
-        'defineView': function(className, classDef) { return new View(className, classDef); },
-        'defineModel': function(className, classDef) { return new Model(className, classDef); },
-        'defineAdapter': function(className, classDef) { return new Adapter(className, classDef); },
+        'View': function(className, classDef) { return new View(className, classDef); },
+        'Model': function(className, classDef) { return new Model(className, classDef); },
+        'Adapter': function(className, classDef) { return new Adapter(className, classDef); },
         'loadScript': loadScripts,
         'require': require,
         'loadJSONP': loadJSONP,

@@ -1,9 +1,9 @@
-koko.defineModel('GoogleMaps', function() {
+koko.Model('GoogleMaps', function() {
 
     koko.require('http://maps.google.com/maps/api/js?sensor=false&callback=', null, null, true); 
 
     this.getMap = function(eventData, callback, context) {
-        if (typeof eventData.address === 'undefined') { throw 'Error: Call to getMap requires an address'; }
+        if (typeof eventData.address === 'undefined' || eventData.address.replace(' ','') === '') { throw 'Error: Call to getMap requires an address'; }
 
         this.codeAddress(eventData, function(coords) {
             var myOptions = {
@@ -16,7 +16,7 @@ koko.defineModel('GoogleMaps', function() {
                 map: map,
                 position: coords
             });
-            callback.call(context);
+            callback.call(context, map);
         });
     };
     
