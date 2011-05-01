@@ -11,10 +11,10 @@ koko.Adapter('YouTube', function() {
         return feedHTML;
     };
     
-    this.getUserVideos = function(eventData, callback, context) {
+    this.getUserVideos = function(eventData, callback, onerror, context) {
         this.dispatchEvent('Model:YouTube:getUserVideos', eventData, function(feedData) {
             callback.call(context, feedParser(feedData));
-        });
+        }, onerror);
     };
     
 });

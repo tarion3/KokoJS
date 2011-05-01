@@ -5,7 +5,10 @@ var googleMaps = koko.View('GoogleMaps', function() {
     this.getMap = function(address) {
         var mapData = {'address':address};
         mapData.destCanvas = document.getElementById('map');
-        this.dispatchEvent('Adapter:GoogleMaps:getMap', mapData, function(map) {});
+        this.dispatchEvent('Adapter:GoogleMaps:getMap', mapData, function(map) {},
+        function(error) {
+            $('#map').attr('innerHTML', error);
+        });
     };
 
 });
@@ -14,13 +17,14 @@ var twitter = koko.View('Twitter', function() {
             
     koko.require('./adapters/Twitter.js');
 
-    this.getPublicTweets = function(eventData, callback, context) {
-        this.dispatchEvent('Adapter:Twitter:getPublicTweets', eventData, function(feedHTML) {
+    this.getPublicTweets = function() {
+        this.dispatchEvent('Adapter:Twitter:getPublicTweets', null, function(feedHTML) {
             $('#tweets').attr('innerHTML', feedHTML);
         });
     };
     
-    this.getTweetsByName = function(eventData, callback, context) {
+    this.getTweetsByName = function(screenname) {
+        var eventData = {'screenname':screenname};
         this.dispatchEvent('Adapter:Twitter:getTweetsByName', eventData, function(feedHTML) {
             $('#tweets').attr('innerHTML', feedHTML);
         });
@@ -31,8 +35,10 @@ var twitter = koko.View('Twitter', function() {
 koko.require('http://ajax.googleapis.com/ajax/libs/jquery/1.5.2/jquery.min.js', function() {
 
     $(document).ready(function() {
+        koko.console.debug = true;
         $('#mapForm').submit(function() { googleMaps.getMap($('#mapname').attr('value')); return false; });
-        $('#tweets>button').click(function() { twitter.getPublicTweets(); });
+        $('#pubTweets').click(function() { twitter.getPublicTweets(); });
+        $('#userTweets').click(function() { twitter.getTweetsByName($('#tweetUsername').attr('value')); });
     });
 
 });

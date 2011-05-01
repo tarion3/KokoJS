@@ -1,11 +1,11 @@
 koko.Model('GoogleMaps', function() {
 
-    koko.require('http://maps.google.com/maps/api/js?sensor=false&callback=', null, null, true); 
+    koko.loadJSONP('http://maps.google.com/maps/api/js?sensor=false&callback='); 
 
-    this.getMap = function(eventData, callback, context) {
+    this.getMap = function(eventData, callback, onerror, context) {
         if (typeof eventData.address === 'undefined' || eventData.address.replace(' ','') === '') { throw 'Error: Call to getMap requires an address'; }
 
-        this.codeAddress(eventData, function(coords) {
+        this.dispatchEvent('Model:GoogleMaps:codeAddress', eventData, function(coords) {
             var myOptions = {
                 zoom: 8,
                 center: coords,
@@ -17,17 +17,17 @@ koko.Model('GoogleMaps', function() {
                 position: coords
             });
             callback.call(context, map);
-        });
+        }, onerror);
     };
     
-    this.codeAddress = function(eventData, callback, context) {
+    this.codeAddress = function(eventData, callback, onerror, context) {
         if (typeof eventData.address === 'undefined') { throw 'Error: Call to codeAddress requires address to decode'; }
         var geocoder = new google.maps.Geocoder();
         geocoder.geocode({ 'address': eventData.address}, function(results, status) {
             if (status == google.maps.GeocoderStatus.OK) {
                 callback.call(context, results[0].geometry.location);
             } else {
-                throw 'Geocode was not successful for the following reason: ' + status;
+                onerror.call(context, 'Geocode was not successful for the following reason: ' + status);
             }
         });
     };
