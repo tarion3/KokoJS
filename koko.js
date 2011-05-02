@@ -1,5 +1,5 @@
 (function(){
-    
+
     var extFWName = 'koko',         // Global framework object name
         extFWRef,                   // Global framework object reference
         emptyFunc = function(){};
