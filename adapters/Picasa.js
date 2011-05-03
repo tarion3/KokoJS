@@ -13,10 +13,12 @@ koko.Adapter('Picasa', function() {
         return feedHTML;
     };
     
-    this.getRecentPhotos = function(eventData, callback, onerror, context) {
-        this.dispatchEvent('Model:Picasa:getRecentPhotos', eventData, function(feedData) {
-            callback.call(context, feedParser(feedData));
-        }, onerror);
+    this.getRecentPhotos = function(options) {
+        this.dispatchEvent('Model:Picasa:getRecentPhotos', options.augment({
+            callback: function(feedData) {
+                options.callback.call(options.context, feedParser(feedData));
+            }
+        }));
     };
     
 });

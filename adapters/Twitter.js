@@ -15,16 +15,20 @@ koko.Adapter('Twitter', function() {
         return feedHTML;
     };
 
-    this.getPublicTweets = function(eventData, callback, onerror, context) {
-        this.dispatchEvent('Model:Twitter:getPublicTweets', eventData, function(feedData) {
-            callback.call(context, feedParser(feedData));
-        }, onerror);
+    this.getPublicTweets = function(options) {
+        this.dispatchEvent('Model:Twitter:getPublicTweets', options.augment({
+            callback: function(feedData) {
+                options.callback.call(options.context, feedParser(feedData));
+            } 
+        }));
     };
     
-    this.getTweetsByName = function(eventData, callback, onerror, context) {
-        this.dispatchEvent('Model:Twitter:getTweetsByName', eventData, function(feedData) {
-            callback.call(context, feedParser(feedData));
-        }, onerror);
+    this.getTweetsByName = function(options) {
+        this.dispatchEvent('Model:Twitter:getTweetsByName', options.augment({
+            callback: function(feedData) {
+                options.callback.call(options.context, feedParser(feedData));
+            } 
+        }));
     };
 
 });
