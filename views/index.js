@@ -4,10 +4,7 @@ var googleMaps = koko.View('GoogleMaps', function() {
 
     this.getMap = function(address) {
         this.dispatchEvent('Adapter:GoogleMaps:getMap', {
-            data: {
-                'address': address,
-                'destCanvas': document.getElementById('map')
-            },
+            data: { 'address': address, 'destCanvas': document.getElementById('map') },
             callback: function(map) {},
             onerror: function(error) { $('#map').attr('innerHTML', error); }
         });
@@ -41,7 +38,6 @@ koko.require('http://ajax.googleapis.com/ajax/libs/jquery/1.5.2/jquery.min.js', 
     callback: function() {
 
         $(document).ready(function() {
-            koko.console.debug = true;
             $('#mapForm').submit(function() { googleMaps.getMap($('#mapname').attr('value')); return false; });
             $('#pubTweets').click(function() { twitter.getPublicTweets(); });
             $('#tweetForm').submit(function() { twitter.getTweetsByName($('#tweetUsername').attr('value')); return false; });

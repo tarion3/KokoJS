@@ -10,18 +10,9 @@ koko.Model('GoogleMaps', function() {
             
             callback: function(coords) {
                 
-                var myOptions = {
-                    zoom: 8,
-                    center: coords,
-                    mapTypeId: google.maps.MapTypeId.ROADMAP
-                };
-                
+                var myOptions = { zoom: 8, center: coords, mapTypeId: google.maps.MapTypeId.ROADMAP };
                 var map = new google.maps.Map(options.data.destCanvas, myOptions);
-                
-                var marker = new google.maps.Marker({
-                    map: map,
-                    position: coords
-                });
+                var marker = new google.maps.Marker({ map: map, position: coords });
                 
                 options.callback.call(options.context, map);
                 

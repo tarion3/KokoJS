@@ -287,7 +287,9 @@
         if (typeof eventNames === 'undefined') { throw 'Error: Call to queueEvents requires eventName'; }
         if (typeof eventNames === 'string') { eventNames = (eventNames.replace(' ', '')).split(','); }
         if (typeof options === 'undefined') { options = {}; }
-
+        
+        options.augment = _augment;
+        
         var async = (typeof options.async !== 'boolean') ? true : options.async;
         var callback = (typeof options.callback !== 'function') ? emptyFunc : options.callback;
         var context = (typeof options.context === 'undefined') ? this : options.context;
@@ -341,7 +343,6 @@
         
         // Allows each MVA object to dispatch MVA events
         this.dispatchEvent = function(eventName, options) {
-            options.augment = _augment;
             dispatchEvent(eventName, options, dispatchDeny);
         };
         
