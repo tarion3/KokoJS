@@ -4,16 +4,16 @@ var twitter = koko.View('Twitter', function() {
 
     this.getPublicTweets = function() {
         this.dispatchEvent('Adapter:Twitter:getPublicTweets', {
-            callback: function(feedHTML) { $('#tweets').attr('innerHTML', feedHTML); },
-            onerror: function(error) { $('#tweets').attr('innerHTML', error); }
+            callback: function(feedHTML) { $('#tweets').html(feedHTML); },
+            onerror: function(error) { $('#tweets').html(error); }
         });
     };
     
     this.getTweetsByName = function(screenname) {
         this.dispatchEvent('Adapter:Twitter:getTweetsByName', {
             data: {'screenname':screenname},
-            callback: function(feedHTML) { $('#tweets').attr('innerHTML', feedHTML); },
-            onerror: function(error) { $('#tweets').attr('innerHTML', error); }
+            callback: function(feedHTML) { $('#tweets').html(feedHTML); },
+            onerror: function(error) { $('#tweets').html(error); }
         });
     };
 
