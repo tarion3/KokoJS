@@ -33,7 +33,7 @@ var twitter = koko.View('Twitter', function() {
 
 });
 
-koko.require('http://ajax.googleapis.com/ajax/libs/jquery/1.5.2/jquery.min.js', {
+koko.require('https://code.jquery.com/jquery-1.12.4.min.js', {
 
     callback: function() {
 
